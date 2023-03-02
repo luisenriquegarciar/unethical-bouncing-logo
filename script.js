@@ -70,7 +70,7 @@ function setRandomLogoColor() {
     // Ensure that new color is different enough from the last one
     const hueOffset = Math.abs(currentHueRotate - newHueRotate);
     if (hueOffset < 90) {
-        newHueRotate = currentHueRotate + 90;
+        newHueRotate = currentHueRotate + 180;
     }
 
     logoContainer.style.filter = `invert(42%) sepia(93%) saturate(1352%) hue-rotate(${newHueRotate}deg) brightness(119%) contrast(119%)`;
