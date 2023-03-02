@@ -81,6 +81,13 @@ function getMaxXY() {
     return [windowWidth - logoWidth, windowHeight - logoHeight];
 }
 
+function updateDimensions() {
+    windowWidth = window.innerWidth;
+    windowHeight = window.innerHeight;
+    logoWidth = logoImg.clientWidth;
+    logoHeight = logoImg.clientHeight;
+}
+
 // Event listeners
 
 window.addEventListener("click", () => {
@@ -93,16 +100,10 @@ window.addEventListener("click", () => {
     }
 });
 
-window.addEventListener("resize", () => {
-    windowWidth = window.innerWidth;
-    windowHeight = window.innerHeight;
-    logoWidth = logoImg.clientWidth;
-    logoHeight = logoImg.clientHeight;
-});
+window.addEventListener("resize", updateDimensions);
 
 logoImg.addEventListener("load", () => {
-    logoWidth = logoImg.clientWidth;
-    logoHeight = logoImg.clientHeight;
+    updateDimensions();
 
     const [maxX, maxY] = getMaxXY();
     currentX = Math.random() * maxX;
@@ -111,9 +112,7 @@ logoImg.addEventListener("load", () => {
     setLogoPosition(currentX, currentY);
     setRandomLogoColor();
 });
-logoImg.addEventListener("error", () => {
-    alert("Error loading image");
-});
+logoImg.addEventListener("error", () => alert("Error loading image"));
 
 // Start animation
 if (!paused) {
