@@ -1,13 +1,16 @@
 const FPS_INTERVAL = 1000 / 144;
-const SPEED = 1.25;
+
+let speed = 1.25;
+let paused = false;
+let animationId;
+let lastUpdate = performance.now();
 
 const logoContainer = document.getElementById("logo-container");
 const logoImg = document.getElementById("logo");
-
-let animationId;
-
-let paused = false;
-let lastUpdate = performance.now();
+const settingsPanel = document.getElementById("settings");
+const speedInput = document.getElementById("logo-speed");
+speedInput.value = speed;
+const bgColorInput = document.getElementById("bg-color-input");
 
 let windowWidth = window.innerWidth;
 let windowHeight = window.innerHeight;
@@ -16,10 +19,12 @@ let logoHeight = 0;
 
 let directionX = Math.random() < 0.5 ? "east" : "west";
 let directionY = Math.random() < 0.5 ? "south" : "north";
-let currentX = 0;
-let currentY = 0;
+let currentX = null;
+let currentY = null;
 
 let currentHueRotate = 0;
+let logoSources = [];
+let logoSourceIndex = 0;
 
 function animate() {
     animationId = requestAnimationFrame(animate);
@@ -35,15 +40,15 @@ function animate() {
 
     if (currentX >= maxX || currentX <= 0) {
         directionX = currentX <= 0 ? "east" : "west";
-        setRandomLogoColor();
+        onBorderHit();
     }
     if (currentY >= maxY || currentY <= 0) {
         directionY = currentY <= 0 ? "south" : "north";
-        setRandomLogoColor();
+        onBorderHit();
     }
 
-    currentX += directionX === "east" ? SPEED : -SPEED;
-    currentY += directionY === "south" ? SPEED : -SPEED;
+    currentX += directionX === "east" ? speed : -speed;
+    currentY += directionY === "south" ? speed : -speed;
     setLogoPosition(currentX, currentY);
 
     // Get ready for next frame by setting lastUpdate=now, but also adjust for
@@ -64,16 +69,20 @@ function setLogoPosition(x, y) {
     );
 }
 
-function setRandomLogoColor() {
-    let newHueRotate = Math.random() * 360;
+function onBorderHit() {
+    if (logoSources.length > 0) {
+        setLogoHue(0, true);
+        changeLogo(logoSources[++logoSourceIndex % logoSources.length]);
+        return;
+    }
 
+    let newHueRotate = Math.random() * 360;
     // Ensure that new color is different enough from the last one
     const hueOffset = Math.abs(currentHueRotate - newHueRotate);
     if (hueOffset < 90) {
         newHueRotate = currentHueRotate + 180;
     }
-
-    logoContainer.style.filter = `invert(42%) sepia(93%) saturate(1352%) hue-rotate(${newHueRotate}deg) brightness(119%) contrast(119%)`;
+    setLogoHue(newHueRotate);
     currentHueRotate = newHueRotate;
 }
 
@@ -88,16 +97,84 @@ function updateDimensions() {
     logoHeight = logoImg.clientHeight;
 }
 
+function play() {
+    animationId = requestAnimationFrame(animate);
+    document.getElementById("pause-notification").style.visibility = "hidden";
+}
+
+function pause() {
+    cancelAnimationFrame(animationId);
+    document.getElementById("pause-notification").style.visibility = "visible";
+}
+
+function logoUpload() {
+    const logoFiles = Array.from(document.getElementById("logo-upload").files);
+    logoSources = logoFiles.map(URL.createObjectURL);
+    if (logoSources.length > 0) {
+        changeLogo(logoSources[0]);
+        setLogoHue(0, true);
+    }
+}
+
+function changeLogo(src) {
+    if (logoImg.src === src) {
+        return;
+    }
+    logoImg.src = src;
+}
+
+function setLogoHue(hue, customImage = false) {
+    if (customImage) {
+        logoContainer.style.filter = `hue-rotate(${hue}deg)`;
+    } else {
+        logoContainer.style.filter = `invert(42%) sepia(93%) saturate(1352%) hue-rotate(${hue}deg) brightness(199%) contrast(119%)`;
+    }
+}
+
+function speedChange() {
+    const newSpeed = speedInput.value;
+    if (newSpeed) {
+        speed = +newSpeed;
+    }
+}
+
+function bgColorChange() {
+    const newColor = bgColorInput.value;
+    if (newColor) {
+        document.body.style.background = newColor;
+    }
+}
+
+function inactivityTime() {
+    let timerId;
+    window.onload = resetTimer;
+    window.onmousemove = resetTimer;
+    window.onmousedown = resetTimer; // catches touchscreen presses as well
+    window.ontouchstart = resetTimer; // catches touchscreen swipes as well
+    window.ontouchmove = resetTimer; // required by some devices
+    window.onclick = resetTimer; // catches touchpad clicks as well
+    window.onkeydown = resetTimer;
+    window.addEventListener("scroll", resetTimer, true);
+
+    function hideSettings() {
+        settingsPanel.style.visibility = "hidden";
+    }
+
+    function resetTimer() {
+        settingsPanel.style.visibility = "visible";
+        clearTimeout(timerId);
+        timerId = setTimeout(hideSettings, 2000);
+    }
+}
+
 // Event listeners
 
-window.addEventListener("click", () => {
-    paused = !paused;
-
-    if (paused) {
-        cancelAnimationFrame(animationId);
-    } else {
-        animationId = requestAnimationFrame(animate);
+window.addEventListener("click", (e) => {
+    if (e.target.tagName !== "HTML") {
+        return;
     }
+    paused ? play() : pause();
+    paused = !paused;
 });
 
 window.addEventListener("resize", updateDimensions);
@@ -105,16 +182,19 @@ window.addEventListener("resize", updateDimensions);
 logoImg.addEventListener("load", () => {
     updateDimensions();
 
-    const [maxX, maxY] = getMaxXY();
-    currentX = Math.random() * maxX;
-    currentY = Math.random() * maxY;
-
-    setLogoPosition(currentX, currentY);
-    setRandomLogoColor();
+    if (!currentX || !currentY) {
+        const [maxX, maxY] = getMaxXY();
+        currentX ??= Math.random() * maxX;
+        currentY ??= Math.random() * maxY;
+        setLogoPosition(currentX, currentY);
+        setLogoHue(180);
+    }
 });
 logoImg.addEventListener("error", () => alert("Error loading image"));
 
 // Start animation
 if (!paused) {
-    animationId = requestAnimationFrame(animate);
+    play();
 }
+
+inactivityTime();
