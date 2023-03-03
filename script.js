@@ -97,14 +97,16 @@ function updateDimensions() {
     logoHeight = logoImg.clientHeight;
 }
 
-function play() {
+function play(sendEvent = true) {
     animationId = requestAnimationFrame(animate);
     document.getElementById("pause-notification").style.visibility = "hidden";
+    sendEvent && trackEvent("animation", "play");
 }
 
 function pause() {
     cancelAnimationFrame(animationId);
     document.getElementById("pause-notification").style.visibility = "visible";
+    trackEvent("animation", "pause");
 }
 
 function logoUpload() {
@@ -113,6 +115,7 @@ function logoUpload() {
     if (logoSources.length > 0) {
         changeLogo(logoSources[0]);
         setLogoHue(0, true);
+        trackEvent("logo", "upload", "logo_count=" + logoSources.length);
     }
 }
 
@@ -138,11 +141,34 @@ function speedChange() {
     }
 }
 
+function speedChangeEnd() {
+    const newSpeed = speedInput.value;
+    if (newSpeed) {
+        trackEvent("logo", "speed", "speed=" + newSpeed);
+    }
+}
+
 function bgColorChange() {
     const newColor = bgColorInput.value;
     if (newColor) {
         document.body.style.background = newColor;
     }
+}
+
+function bgColorChangeEnd() {
+    const newColor = bgColorInput.value;
+    if (newColor) {
+        trackEvent("bg", "color", "color=" + newColor);
+    }
+}
+
+function enterFullscreen() {
+    document.documentElement.requestFullscreen();
+    trackEvent("fullscreen", "request_fullscreen");
+}
+
+function githubClick() {
+    trackEvent("link_click", "github");
 }
 
 function inactivityTime() {
@@ -156,21 +182,34 @@ function inactivityTime() {
     window.onkeydown = resetTimer;
     window.addEventListener("scroll", resetTimer, true);
 
-    function hideSettings() {
+    function idle() {
         settingsPanel.style.visibility = "hidden";
+        document.querySelector("html").style.cursor = "none";
     }
 
     function resetTimer() {
         settingsPanel.style.visibility = "visible";
+        document.querySelector("html").style.cursor = "auto";
         clearTimeout(timerId);
-        timerId = setTimeout(hideSettings, 2000);
+        timerId = setTimeout(idle, 2000);
     }
+}
+
+function trackEvent(category, action, label, value) {
+    if (typeof ga !== "function") {
+        return;
+    }
+    ga("send", category, action, label, value);
 }
 
 // Event listeners
 
 window.addEventListener("click", (e) => {
-    if (e.target.tagName !== "HTML") {
+    if (
+        e.target.tagName !== "HTML" &&
+        e.target.id !== "logo" &&
+        e.target.id !== "pause-notification"
+    ) {
         return;
     }
     paused ? play() : pause();
@@ -192,9 +231,13 @@ logoImg.addEventListener("load", () => {
 });
 logoImg.addEventListener("error", () => alert("Error loading image"));
 
-// Start animation
-if (!paused) {
-    play();
+inactivityTime();
+
+if (typeof ga === "function") {
+    ga("send", "pageview");
 }
 
-inactivityTime();
+// Start animation
+if (!paused) {
+    play(false);
+}

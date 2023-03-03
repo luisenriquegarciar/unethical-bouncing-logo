@@ -24,6 +24,17 @@
 
 
     <script src="script.js" defer></script>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-259151856-1"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'UA-259151856-1');
+    </script>
+
 </head>
 <style>
     * {
@@ -131,19 +142,20 @@
 
         <div class="setting-control">
             <label for="logo-speed">Speed</label>
-            <input id="logo-speed" type="range" min="1" max="10" step="0.5" oninput="speedChange()" />
+            <input id="logo-speed" type="range" min="1" max="10" step="0.5" oninput="speedChange()"
+                onchange="speedChangeEnd()" />
         </div>
 
         <div class="setting-control">
             <label for="logo-speed">Background</label>
-            <input id="bg-color-input" type="color" oninput="bgColorChange()" />
+            <input id="bg-color-input" type="color" oninput="bgColorChange()" onchange="bgColorChangeEnd()" />
         </div>
 
-        <button onclick="document.documentElement.requestFullscreen()">Fullscreen</button>
+        <button onclick="enterFullscreen()">Fullscreen</button>
 
         <div>
             <span>© 2023 </span>
-            <a href="https://github.com/mabenj/dvd-screensaver" target="_blank">
+            <a href="https://github.com/mabenj/dvd-screensaver" target="_blank" onclick="githubClick()">
                 mabenj
             </a>
         </div>
